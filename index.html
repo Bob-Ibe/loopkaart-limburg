@@ -490,6 +490,7 @@ function select(code,fly){
   if(isPhone()){$('#panel').classList.remove('open');$('#handle').setAttribute('aria-expanded','false')}
   const lyr=layers.get(code);
   if(!fly&&lyr&&isPhone()){const pt=map.latLngToContainerPoint([b.ctr[1],b.ctr[0]]);const topH=$('#top').getBoundingClientRect().bottom;const band=(topH+window.innerHeight*.4)/2;map.panBy([pt.x-window.innerWidth/2,pt.y-band],{duration:.4})}
+  if(fly||isPhone())touched=true;
   if(fly&&lyr){const bb=lyr.getBounds();map.flyToBounds(bb,{maxZoom:15,duration:.6,paddingTopLeft:isPhone()?[20,140]:[40,40],paddingBottomRight:isPhone()?[20,Math.round(window.innerHeight*.62)]:[420,40]})}
 }
 function closeDetail(){selected=null;$('#detail').hidden=true;$('#app').classList.remove('has-detail');restyle();renderList()}
@@ -573,7 +574,14 @@ const mq=window.matchMedia('(prefers-color-scheme: dark)');
 const onTheme=()=>{readPalette();styleStatic();legend();restyle();renderList()};
 mq.addEventListener&&mq.addEventListener('change',onTheme);
 new MutationObserver(onTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-window.addEventListener('resize',()=>map.invalidateSize());
+// Zolang je de kaart niet zelf hebt bewogen, past hij zich aan zodra het venster zijn echte maat heeft
+// (bijv. een link die in een achtergrondtabblad opent, of een telefoon die kantelt).
+let touched=false;
+['pointerdown','wheel','touchstart','keydown'].forEach(ev=>map.getContainer().addEventListener(ev,()=>{touched=true},{passive:true}));
+function refit(){map.invalidateSize();if(!touched)fitAll()}
+window.addEventListener('resize',refit);
+window.addEventListener('load',refit);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!touched)refit()});
 
 styleStatic();setMode(mode);setTab(tab);refresh(false);updateLabels();
 })();
